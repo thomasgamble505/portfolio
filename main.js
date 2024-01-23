@@ -1,5 +1,3 @@
-
-
 /* Please ❤ this if you like it! */
 
 
@@ -69,4 +67,4 @@
 		}
 	});
 	
-})(jQuery); 
+})(jQuery);
