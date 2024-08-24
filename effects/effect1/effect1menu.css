@@ -1,0 +1,47 @@
+html,
+body {
+	height: 100%;
+}
+body {
+	background-color: #131313;
+	font-family: "Inter", sans-serif;
+	font-optical-sizing: auto;
+	font-style: normal;
+	font-variation-settings: "slnt" 0;
+}
+
+.btn--animateglowPink {
+	--border-size: 6px;
+	--border-angle: 0turn;
+	background-image: conic-gradient(
+			from var(--border-angle),
+			#131313,
+			#131313 50%,
+			#131313
+		),
+		conic-gradient(
+			from var(--border-angle),
+			transparent 20%,
+			#d33cf2,
+			transparent
+		);
+	background-size: calc(100% - (var(--border-size) * 2))
+			calc(100% - (var(--border-size) * 2)),
+		cover;
+	background-position: center center;
+	background-repeat: no-repeat;
+	animation: 8s linear infinite bg-spin;
+}
+@keyframes bg-spin {
+	to {
+		--border-angle: 1turn;
+	}
+}
+@property --border-angle {
+	syntax: "<angle>";
+	inherits: true;
+	initial-value: 0turn;
+}
+
+
+
