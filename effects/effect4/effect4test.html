@@ -15,24 +15,27 @@
       color: white;
       padding: 10px;
     }
+    .control {
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
   <div id="controls">
     <label for="subdivisions">Subdivisions:</label>
-    <input type="range" id="subdivisions" min="1" max="100" value="10">
+    <input type="range" id="subdivisions" min="1" max="100" value="10" class="control">
     <br>
     <input type="checkbox" id="wireframe">
     <label for="wireframe">Wireframe</label>
     <br>
     <label for="displacementStrength">Displacement Strength:</label>
-    <input type="range" id="displacementStrength" min="0" max="10" value="1" step="0.1">
+    <input type="range" id="displacementStrength" min="0" max="10" value="1" step="0.1" class="control">
     <br>
     <label for="displacementScale">Displacement Scale:</label>
-    <input type="range" id="displacementScale" min="1" max="100" value="10">
+    <input type="range" id="displacementScale" min="1" max="100" value="10" class="control">
     <br>
     <label for="displacementDetail">Displacement Detail:</label>
-    <input type="range" id="displacementDetail" min="1" max="10" value="1">
+    <input type="range" id="displacementDetail" min="1" max="10" value="1" class="control">
   </div>
 
   <canvas id="canvas"></canvas>
@@ -40,38 +43,6 @@
   <script src="https://cdn.jsdelivr.net/npm/three@0.143.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.143.0/examples/js/controls/OrbitControls.js"></script>
   <script>
-    // Define DOM elements
-    const subdivisionsSlider = document.getElementById('subdivisions');
-    const wireframeCheckbox = document.getElementById('wireframe');
-    const displacementStrengthSlider = document.getElementById('displacementStrength');
-    const displacementScaleSlider = document.getElementById('displacementScale');
-    const displacementDetailSlider = document.getElementById('displacementDetail');
-
-    // Perlin noise functions
-    function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
-    function lerp(t, a, b) { return a + t * (b - a); }
-    function grad(hash, x, y) {
-      const h = hash & 15;
-      const u = h < 8 ? x : y;
-      const v = h < 4 ? y : h === 12 || h === 14 ? x : 0;
-      return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
-    }
-    function perlin(x, y) {
-      const X = Math.floor(x) & 255;
-      const Y = Math.floor(y) & 255;
-      x -= Math.floor(x);
-      y -= Math.floor(y);
-      const u = fade(x);
-      const v = fade(y);
-      const A = perm[X] + Y;
-      const B = perm[X + 1] + Y;
-      return lerp(v, lerp(u, grad(perm[A], x, y), grad(perm[B], x - 1, y)),
-                    lerp(u, grad(perm[A + 1], x, y - 1), grad(perm[B + 1], x - 1, y - 1)));
-    }
-    const perm = [...Array(256).keys()].map(i => i).sort(() => Math.random() - 0.5);
-    perm.push(...perm); // Duplicate to avoid overflow
-
-    // Three.js setup
     const canvas = document.getElementById('canvas');
     const renderer = new THREE.WebGLRenderer({ canvas: canvas });
     const scene = new THREE.Scene();
@@ -80,6 +51,8 @@
     camera.position.set(5, 5, 5);
 
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+
     scene.background = new THREE.Color(0x000000);
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
@@ -89,21 +62,19 @@
     directionalLight.position.set(1, 1, 1).normalize();
     scene.add(directionalLight);
 
-    // Create plane geometry
+    const planeWidth = 10;
+    const planeHeight = 10;
+    const planeSegments = 100;
+
     function createPlaneGeometry() {
-      const width = 10;
-      const height = 10;
-      const segments = parseInt(subdivisionsSlider.value);
-      const geometry = new THREE.PlaneGeometry(width, height, segments, segments);
+      const geometry = new THREE.PlaneGeometry(planeWidth, planeHeight, planeSegments, planeSegments);
       const position = geometry.attributes.position.array;
-
-      const strength = parseFloat(displacementStrengthSlider.value);
-      const scale = parseFloat(displacementScaleSlider.value);
-      const detail = parseFloat(displacementDetailSlider.value);
-
       for (let i = 0; i < position.length; i += 3) {
         const x = position[i];
         const y = position[i + 1];
+        const scale = parseFloat(displacementScaleSlider.value);
+        const strength = parseFloat(displacementStrengthSlider.value);
+        const detail = parseFloat(displacementDetailSlider.value);
         const noise = perlin(x * scale / detail, y * scale / detail);
         position[i + 2] = strength * noise;
       }
@@ -113,45 +84,23 @@
 
     const displacementMaterial = new THREE.MeshStandardMaterial({
       color: 0x00ff00,
-      side: THREE.DoubleSide,
-      wireframe: false
+      side: THREE.DoubleSide
     });
-    let plane = new THREE.Mesh(createPlaneGeometry(), displacementMaterial);
+    const plane = new THREE.Mesh(createPlaneGeometry(), displacementMaterial);
+
     scene.add(plane);
 
-    // Camera controls
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.25;
     controls.enableZoom = true;
 
-    const moveSpeed = 0.1;
-    const keys = {};
+    const subdivisionsSlider = document.getElementById('subdivisions');
+    const wireframeCheckbox = document.getElementById('wireframe');
+    const displacementStrengthSlider = document.getElementById('displacementStrength');
+    const displacementScaleSlider = document.getElementById('displacementScale');
+    const displacementDetailSlider = document.getElementById('displacementDetail');
 
-    document.addEventListener('keydown', (event) => {
-      keys[event.code] = true;
-    });
-
-    document.addEventListener('keyup', (event) => {
-      keys[event.code] = false;
-    });
-
-    function updateCameraPosition() {
-      if (keys['KeyW']) {
-        camera.position.z -= moveSpeed;
-      }
-      if (keys['KeyS']) {
-        camera.position.z += moveSpeed;
-      }
-      if (keys['KeyA']) {
-        camera.position.x -= moveSpeed;
-      }
-      if (keys['KeyD']) {
-        camera.position.x += moveSpeed;
-      }
-    }
-
-    // Control events
     function updatePlane() {
       plane.geometry.dispose();
       plane.geometry = createPlaneGeometry();
@@ -172,11 +121,9 @@
       camera.updateProjectionMatrix();
     });
 
-    // Animation loop
     function animate() {
       requestAnimationFrame(animate);
       controls.update();
-      updateCameraPosition();
       renderer.render(scene, camera);
     }
 
