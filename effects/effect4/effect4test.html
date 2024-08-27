@@ -52,6 +52,10 @@
     camera.position.set(5, 5, 5);
 
     renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+
+    // Background color
+    scene.background = new THREE.Color(0x000000);
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
