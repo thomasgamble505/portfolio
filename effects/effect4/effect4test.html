@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Interactive 3D Plane with Perlin Noise</title>
+  <title>Interactive 3D Plane with Lighting and Perlin Noise</title>
   <style>
     body {
       margin: 0;
@@ -82,14 +82,23 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     scene.background = new THREE.Color(0x000000);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    // Add Ambient Light
+    const ambientLight = new THREE.AmbientLight(0x404040); // soft white light
     scene.add(ambientLight);
 
+    // Add Directional Light with shadow
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-    directionalLight.position.set(1, 1, 1).normalize();
+    directionalLight.position.set(5, 10, 5).normalize();
+    directionalLight.castShadow = true;
     scene.add(directionalLight);
 
-    // Create plane geometry
+    // Configure shadow properties
+    directionalLight.shadow.mapSize.width = 1024; // default
+    directionalLight.shadow.mapSize.height = 1024; // default
+    directionalLight.shadow.camera.near = 0.5;    // default
+    directionalLight.shadow.camera.far = 500;     // default
+
+    // Plane Geometry with noise displacement
     function createPlaneGeometry() {
       const width = 10;
       const height = 10;
@@ -116,7 +125,10 @@
       side: THREE.DoubleSide,
       wireframe: false
     });
+
     let plane = new THREE.Mesh(createPlaneGeometry(), displacementMaterial);
+    plane.castShadow = true; // The plane will cast shadows
+    plane.receiveShadow = true; // The plane will receive shadows
     scene.add(plane);
 
     // Camera controls
