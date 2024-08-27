@@ -15,6 +15,14 @@
       color: white;
       padding: 10px;
     }
+    #lightControls {
+      position: absolute;
+      top: 200px;
+      left: 10px;
+      background-color: rgba(0, 0, 0, 0.5);
+      color: white;
+      padding: 10px;
+    }
   </style>
 </head>
 <body>
@@ -35,6 +43,14 @@
     <input type="range" id="displacementDetail" min="1" max="10" value="1">
   </div>
 
+  <div id="lightControls">
+    <label for="lightAzimuth">Light Azimuth:</label>
+    <input type="range" id="lightAzimuth" min="0" max="360" value="45">
+    <br>
+    <label for="lightElevation">Light Elevation:</label>
+    <input type="range" id="lightElevation" min="0" max="90" value="45">
+  </div>
+
   <canvas id="canvas"></canvas>
 
   <script src="https://cdn.jsdelivr.net/npm/three@0.143.0/build/three.min.js"></script>
@@ -46,6 +62,8 @@
     const displacementStrengthSlider = document.getElementById('displacementStrength');
     const displacementScaleSlider = document.getElementById('displacementScale');
     const displacementDetailSlider = document.getElementById('displacementDetail');
+    const lightAzimuthSlider = document.getElementById('lightAzimuth');
+    const lightElevationSlider = document.getElementById('lightElevation');
 
     // Perlin noise functions
     function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
@@ -88,15 +106,16 @@
 
     // Add Directional Light with shadow
     const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-    directionalLight.position.set(5, 10, 5).normalize();
     directionalLight.castShadow = true;
+    directionalLight.shadow.mapSize.width = 2048; // High-resolution shadow map
+    directionalLight.shadow.mapSize.height = 2048;
+    directionalLight.shadow.camera.near = 0.5;
+    directionalLight.shadow.camera.far = 500;
+    directionalLight.shadow.camera.left = -10;
+    directionalLight.shadow.camera.right = 10;
+    directionalLight.shadow.camera.top = 10;
+    directionalLight.shadow.camera.bottom = -10;
     scene.add(directionalLight);
-
-    // Configure shadow properties
-    directionalLight.shadow.mapSize.width = 1024; // default
-    directionalLight.shadow.mapSize.height = 1024; // default
-    directionalLight.shadow.camera.near = 0.5;    // default
-    directionalLight.shadow.camera.far = 500;     // default
 
     // Plane Geometry with noise displacement
     function createPlaneGeometry() {
@@ -170,6 +189,18 @@
       displacementMaterial.wireframe = wireframeCheckbox.checked;
     }
 
+    function updateLightPosition() {
+      const azimuth = THREE.MathUtils.degToRad(parseFloat(lightAzimuthSlider.value));
+      const elevation = THREE.MathUtils.degToRad(parseFloat(lightElevationSlider.value));
+      
+      const radius = 10;
+      const x = radius * Math.cos(elevation) * Math.cos(azimuth);
+      const y = radius * Math.sin(elevation);
+      const z = radius * Math.cos(elevation) * Math.sin(azimuth);
+      
+      directionalLight.position.set(x, y, z).normalize();
+    }
+
     subdivisionsSlider.addEventListener('input', updatePlane);
     wireframeCheckbox.addEventListener('change', () => {
       displacementMaterial.wireframe = wireframeCheckbox.checked;
@@ -177,12 +208,17 @@
     displacementStrengthSlider.addEventListener('input', updatePlane);
     displacementScaleSlider.addEventListener('input', updatePlane);
     displacementDetailSlider.addEventListener('input', updatePlane);
+    lightAzimuthSlider.addEventListener('input', updateLightPosition);
+    lightElevationSlider.addEventListener('input', updateLightPosition);
 
     window.addEventListener('resize', () => {
       renderer.setSize(window.innerWidth, window.innerHeight);
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
     });
+
+    // Initial light position update
+    updateLightPosition();
 
     // Animation loop
     function animate() {
