@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Interactive 3D Plane</title>
+  <title>Interactive 3D Plane with Perlin Noise</title>
   <style>
     body {
       margin: 0;
@@ -24,6 +24,15 @@
     <br>
     <input type="checkbox" id="wireframe">
     <label for="wireframe">Wireframe</label>
+    <br>
+    <label for="displacementStrength">Displacement Strength:</label>
+    <input type="range" id="displacementStrength" min="0" max="10" value="1" step="0.1">
+    <br>
+    <label for="displacementScale">Displacement Scale:</label>
+    <input type="range" id="displacementScale" min="1" max="100" value="10">
+    <br>
+    <label for="displacementDetail">Displacement Detail:</label>
+    <input type="range" id="displacementDetail" min="1" max="10" value="1">
   </div>
 
   <canvas id="canvas"></canvas>
@@ -31,17 +40,48 @@
   <script src="https://cdn.jsdelivr.net/npm/three@0.143.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.143.0/examples/js/controls/OrbitControls.js"></script>
   <script>
+    // Define DOM elements
+    const subdivisionsSlider = document.getElementById('subdivisions');
+    const wireframeCheckbox = document.getElementById('wireframe');
+    const displacementStrengthSlider = document.getElementById('displacementStrength');
+    const displacementScaleSlider = document.getElementById('displacementScale');
+    const displacementDetailSlider = document.getElementById('displacementDetail');
+
+    // Perlin noise functions
+    function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+    function lerp(t, a, b) { return a + t * (b - a); }
+    function grad(hash, x, y) {
+      const h = hash & 15;
+      const u = h < 8 ? x : y;
+      const v = h < 4 ? y : h === 12 || h === 14 ? x : 0;
+      return ((h & 1) === 0 ? u : -u) + ((h & 2) === 0 ? v : -v);
+    }
+    function perlin(x, y) {
+      const X = Math.floor(x) & 255;
+      const Y = Math.floor(y) & 255;
+      x -= Math.floor(x);
+      y -= Math.floor(y);
+      const u = fade(x);
+      const v = fade(y);
+      const A = perm[X] + Y;
+      const B = perm[X + 1] + Y;
+      return lerp(v, lerp(u, grad(perm[A], x, y), grad(perm[B], x - 1, y)),
+                    lerp(u, grad(perm[A + 1], x, y - 1), grad(perm[B + 1], x - 1, y - 1)));
+    }
+    const perm = [...Array(256).keys()].map(i => i).sort(() => Math.random() - 0.5);
+    perm.push(...perm); // Duplicate to avoid overflow
+
+    // Three.js setup
     const canvas = document.getElementById('canvas');
     const renderer = new THREE.WebGLRenderer({ canvas: canvas });
     const scene = new THREE.Scene();
 
-    // Create a PerspectiveCamera
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(5, 5, 5); // Position the camera
+    camera.position.set(5, 5, 5);
 
     renderer.setSize(window.innerWidth, window.innerHeight);
+    scene.background = new THREE.Color(0x000000);
 
-    // Lights
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
 
@@ -49,42 +89,42 @@
     directionalLight.position.set(1, 1, 1).normalize();
     scene.add(directionalLight);
 
-    // Plane Geometry
-    let planeGeometry = new THREE.PlaneGeometry(10, 10, 10, 10);
-    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: false });
-    const plane = new THREE.Mesh(planeGeometry, material);
+    // Create plane geometry
+    function createPlaneGeometry() {
+      const width = 10;
+      const height = 10;
+      const segments = parseInt(subdivisionsSlider.value);
+      const geometry = new THREE.PlaneGeometry(width, height, segments, segments);
+      const position = geometry.attributes.position.array;
 
-    // Reset the plane rotation to default
-    plane.rotation.set(0, 0, 0);
+      const strength = parseFloat(displacementStrengthSlider.value);
+      const scale = parseFloat(displacementScaleSlider.value);
+      const detail = parseFloat(displacementDetailSlider.value);
 
+      for (let i = 0; i < position.length; i += 3) {
+        const x = position[i];
+        const y = position[i + 1];
+        const noise = perlin(x * scale / detail, y * scale / detail);
+        position[i + 2] = strength * noise;
+      }
+      geometry.attributes.position.needsUpdate = true;
+      return geometry;
+    }
+
+    const displacementMaterial = new THREE.MeshStandardMaterial({
+      color: 0x00ff00,
+      side: THREE.DoubleSide,
+      wireframe: false
+    });
+    let plane = new THREE.Mesh(createPlaneGeometry(), displacementMaterial);
     scene.add(plane);
 
-    // Subdivision Control
-    const subdivisionsSlider = document.getElementById('subdivisions');
-    subdivisionsSlider.addEventListener('input', () => {
-      // Dispose of old geometry
-      plane.geometry.dispose();
-
-      // Create new geometry with updated subdivisions
-      planeGeometry = new THREE.PlaneGeometry(10, 10, parseInt(subdivisionsSlider.value), parseInt(subdivisionsSlider.value));
-
-      // Update the mesh's geometry
-      plane.geometry = planeGeometry;
-    });
-
-    // Wireframe Toggle
-    const wireframeCheckbox = document.getElementById('wireframe');
-    wireframeCheckbox.addEventListener('change', () => {
-      material.wireframe = wireframeCheckbox.checked;
-    });
-
-    // Camera Controls using OrbitControls
+    // Camera controls
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.25;
     controls.enableZoom = true;
 
-    // Camera movement controls
     const moveSpeed = 0.1;
     const keys = {};
 
@@ -109,22 +149,34 @@
       if (keys['KeyD']) {
         camera.position.x += moveSpeed;
       }
-      // Optional: Update the camera's lookAt direction if needed
-      // camera.lookAt(new THREE.Vector3(0, 0, 0));
     }
 
-    // Responsive Canvas
+    // Control events
+    function updatePlane() {
+      plane.geometry.dispose();
+      plane.geometry = createPlaneGeometry();
+      displacementMaterial.wireframe = wireframeCheckbox.checked;
+    }
+
+    subdivisionsSlider.addEventListener('input', updatePlane);
+    wireframeCheckbox.addEventListener('change', () => {
+      displacementMaterial.wireframe = wireframeCheckbox.checked;
+    });
+    displacementStrengthSlider.addEventListener('input', updatePlane);
+    displacementScaleSlider.addEventListener('input', updatePlane);
+    displacementDetailSlider.addEventListener('input', updatePlane);
+
     window.addEventListener('resize', () => {
       renderer.setSize(window.innerWidth, window.innerHeight);
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
     });
 
-    // Rendering Loop
+    // Animation loop
     function animate() {
       requestAnimationFrame(animate);
-      controls.update(); // Update orbit controls
-      updateCameraPosition(); // Update camera position based on key presses
+      controls.update();
+      updateCameraPosition();
       renderer.render(scene, camera);
     }
 
