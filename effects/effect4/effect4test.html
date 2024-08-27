@@ -40,6 +40,13 @@
   <script src="https://cdn.jsdelivr.net/npm/three@0.143.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.143.0/examples/js/controls/OrbitControls.js"></script>
   <script>
+    // Define DOM elements
+    const subdivisionsSlider = document.getElementById('subdivisions');
+    const wireframeCheckbox = document.getElementById('wireframe');
+    const displacementStrengthSlider = document.getElementById('displacementStrength');
+    const displacementScaleSlider = document.getElementById('displacementScale');
+    const displacementDetailSlider = document.getElementById('displacementDetail');
+
     // Perlin noise functions
     function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
     function lerp(t, a, b) { return a + t * (b - a); }
@@ -112,12 +119,12 @@
     let plane = new THREE.Mesh(createPlaneGeometry(), displacementMaterial);
     scene.add(plane);
 
+    // Camera controls
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.25;
     controls.enableZoom = true;
 
-    // Camera controls
     const moveSpeed = 0.1;
     const keys = {};
 
@@ -145,12 +152,6 @@
     }
 
     // Control events
-    const subdivisionsSlider = document.getElementById('subdivisions');
-    const wireframeCheckbox = document.getElementById('wireframe');
-    const displacementStrengthSlider = document.getElementById('displacementStrength');
-    const displacementScaleSlider = document.getElementById('displacementScale');
-    const displacementDetailSlider = document.getElementById('displacementDetail');
-
     function updatePlane() {
       plane.geometry.dispose();
       plane.geometry = createPlaneGeometry();
@@ -183,4 +184,3 @@
   </script>
 </body>
 </html>
-
