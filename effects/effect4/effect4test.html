@@ -42,7 +42,6 @@
 
   <script src="https://cdn.jsdelivr.net/npm/three@0.143.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.143.0/examples/js/controls/OrbitControls.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/perlin-noise@1.0.0/dist/perlin-noise.min.js"></script>
   <script>
     const canvas = document.getElementById('canvas');
     const renderer = new THREE.WebGLRenderer({ canvas: canvas });
@@ -64,25 +63,9 @@
     directionalLight.position.set(1, 1, 1).normalize();
     scene.add(directionalLight);
 
-    // Create Perlin noise texture
-    function createPerlinTexture(size, scale) {
-      const data = new Uint8Array(size * size * 4);
-      const perlin = new PerlinNoise();
-      for (let y = 0; y < size; y++) {
-        for (let x = 0; x < size; x++) {
-          const noiseValue = (perlin.noise(x / scale, y / scale) + 1) / 2; // Normalize to [0, 1]
-          const index = (y * size + x) * 4;
-          data[index] = data[index + 1] = data[index + 2] = noiseValue * 255;
-          data[index + 3] = 255; // Alpha channel
-        }
-      }
-      const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
-      texture.needsUpdate = true;
-      return texture;
-    }
-
-    const textureSize = 256; // Size of the Perlin noise texture
-    let displacementTexture = createPerlinTexture(textureSize, 10); // Initial scale
+    // Load Perlin noise texture
+    const textureLoader = new THREE.TextureLoader();
+    let displacementTexture = textureLoader.load('perlin_noise.png');
 
     const planeGeometry = new THREE.PlaneGeometry(10, 10, 100, 100);
     const displacementMaterial = new THREE.MeshStandardMaterial({
@@ -110,7 +93,8 @@
       const subdivisions = parseInt(subdivisionsSlider.value);
       plane.geometry.dispose();
       plane.geometry = new THREE.PlaneGeometry(10, 10, subdivisions, subdivisions);
-      displacementMaterial.displacementMap = createPerlinTexture(textureSize, parseInt(displacementScaleSlider.value));
+      // Update displacement map as needed
+      displacementMaterial.displacementMap = textureLoader.load('perlin_noise.png');
     });
 
     wireframeCheckbox.addEventListener('change', () => {
@@ -122,13 +106,14 @@
     });
 
     displacementScaleSlider.addEventListener('input', () => {
-      displacementTexture = createPerlinTexture(textureSize, parseInt(displacementScaleSlider.value));
+      // Update displacement map as needed
+      displacementTexture = textureLoader.load('perlin_noise.png');
       displacementMaterial.displacementMap = displacementTexture;
     });
 
     displacementDetailSlider.addEventListener('input', () => {
-      // Update detail as needed; for now, it modifies the scale
-      displacementTexture = createPerlinTexture(textureSize, parseInt(displacementScaleSlider.value));
+      // Update detail or scale as needed
+      displacementTexture = textureLoader.load('perlin_noise.png');
       displacementMaterial.displacementMap = displacementTexture;
     });
 
