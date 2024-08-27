@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Interactive 3D Plane</title>
+  <title>Interactive 3D Plane with Perlin Noise</title>
   <style>
     body {
       margin: 0;
@@ -15,33 +15,44 @@
       color: white;
       padding: 10px;
     }
+    .control {
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
   <div id="controls">
     <label for="subdivisions">Subdivisions:</label>
-    <input type="range" id="subdivisions" min="1" max="100" value="10">
+    <input type="range" id="subdivisions" min="1" max="100" value="10" class="control">
     <br>
     <input type="checkbox" id="wireframe">
     <label for="wireframe">Wireframe</label>
+    <br>
+    <label for="displacementStrength">Displacement Strength:</label>
+    <input type="range" id="displacementStrength" min="0" max="10" value="1" step="0.1" class="control">
+    <br>
+    <label for="displacementScale">Displacement Scale:</label>
+    <input type="range" id="displacementScale" min="1" max="100" value="10" class="control">
+    <br>
+    <label for="displacementDetail">Displacement Detail:</label>
+    <input type="range" id="displacementDetail" min="1" max="10" value="1" class="control">
   </div>
 
   <canvas id="canvas"></canvas>
 
   <script src="https://cdn.jsdelivr.net/npm/three@0.143.0/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.143.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/perlin-noise@1.0.0/dist/perlin-noise.min.js"></script>
   <script>
     const canvas = document.getElementById('canvas');
     const renderer = new THREE.WebGLRenderer({ canvas: canvas });
     const scene = new THREE.Scene();
 
-    // Create a PerspectiveCamera
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(5, 5, 5); // Position the camera
+    camera.position.set(5, 5, 5);
 
     renderer.setSize(window.innerWidth, window.innerHeight);
 
-    // Lights
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
     scene.add(ambientLight);
 
@@ -49,82 +60,83 @@
     directionalLight.position.set(1, 1, 1).normalize();
     scene.add(directionalLight);
 
-    // Plane Geometry
-    let planeGeometry = new THREE.PlaneGeometry(10, 10, 10, 10);
-    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00, wireframe: false });
-    const plane = new THREE.Mesh(planeGeometry, material);
+    // Create Perlin noise texture
+    function createPerlinTexture(size, scale) {
+      const data = new Uint8Array(size * size * 4);
+      const perlin = new PerlinNoise();
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          const noiseValue = (perlin.noise(x / scale, y / scale) + 1) / 2; // Normalize to [0, 1]
+          const index = (y * size + x) * 4;
+          data[index] = data[index + 1] = data[index + 2] = noiseValue * 255;
+          data[index + 3] = 255; // Alpha channel
+        }
+      }
+      const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
+      texture.needsUpdate = true;
+      return texture;
+    }
 
-    // Reset the plane rotation to default
-    plane.rotation.set(0, 0, 0);
+    const textureSize = 256; // Size of the Perlin noise texture
+    let displacementTexture = createPerlinTexture(textureSize, 10); // Initial scale
+
+    const planeGeometry = new THREE.PlaneGeometry(10, 10, 100, 100);
+    const displacementMaterial = new THREE.MeshStandardMaterial({
+      color: 0x00ff00,
+      displacementMap: displacementTexture,
+      displacementScale: 1
+    });
+    const plane = new THREE.Mesh(planeGeometry, displacementMaterial);
 
     scene.add(plane);
 
-    // Subdivision Control
-    const subdivisionsSlider = document.getElementById('subdivisions');
-    subdivisionsSlider.addEventListener('input', () => {
-      // Dispose of old geometry
-      plane.geometry.dispose();
-
-      // Create new geometry with updated subdivisions
-      planeGeometry = new THREE.PlaneGeometry(10, 10, parseInt(subdivisionsSlider.value), parseInt(subdivisionsSlider.value));
-
-      // Update the mesh's geometry
-      plane.geometry = planeGeometry;
-    });
-
-    // Wireframe Toggle
-    const wireframeCheckbox = document.getElementById('wireframe');
-    wireframeCheckbox.addEventListener('change', () => {
-      material.wireframe = wireframeCheckbox.checked;
-    });
-
-    // Camera Controls using OrbitControls
+    // Controls
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.25;
     controls.enableZoom = true;
 
-    // Camera movement controls
-    const moveSpeed = 0.1;
-    const keys = {};
+    const subdivisionsSlider = document.getElementById('subdivisions');
+    const wireframeCheckbox = document.getElementById('wireframe');
+    const displacementStrengthSlider = document.getElementById('displacementStrength');
+    const displacementScaleSlider = document.getElementById('displacementScale');
+    const displacementDetailSlider = document.getElementById('displacementDetail');
 
-    document.addEventListener('keydown', (event) => {
-      keys[event.code] = true;
+    subdivisionsSlider.addEventListener('input', () => {
+      const subdivisions = parseInt(subdivisionsSlider.value);
+      plane.geometry.dispose();
+      plane.geometry = new THREE.PlaneGeometry(10, 10, subdivisions, subdivisions);
+      displacementMaterial.displacementMap = createPerlinTexture(textureSize, parseInt(displacementScaleSlider.value));
     });
 
-    document.addEventListener('keyup', (event) => {
-      keys[event.code] = false;
+    wireframeCheckbox.addEventListener('change', () => {
+      displacementMaterial.wireframe = wireframeCheckbox.checked;
     });
 
-    function updateCameraPosition() {
-      if (keys['KeyW']) {
-        camera.position.z -= moveSpeed;
-      }
-      if (keys['KeyS']) {
-        camera.position.z += moveSpeed;
-      }
-      if (keys['KeyA']) {
-        camera.position.x -= moveSpeed;
-      }
-      if (keys['KeyD']) {
-        camera.position.x += moveSpeed;
-      }
-      // Optional: Update the camera's lookAt direction if needed
-      // camera.lookAt(new THREE.Vector3(0, 0, 0));
-    }
+    displacementStrengthSlider.addEventListener('input', () => {
+      displacementMaterial.displacementScale = parseFloat(displacementStrengthSlider.value);
+    });
 
-    // Responsive Canvas
+    displacementScaleSlider.addEventListener('input', () => {
+      displacementTexture = createPerlinTexture(textureSize, parseInt(displacementScaleSlider.value));
+      displacementMaterial.displacementMap = displacementTexture;
+    });
+
+    displacementDetailSlider.addEventListener('input', () => {
+      // Update detail as needed; for now, it modifies the scale
+      displacementTexture = createPerlinTexture(textureSize, parseInt(displacementScaleSlider.value));
+      displacementMaterial.displacementMap = displacementTexture;
+    });
+
     window.addEventListener('resize', () => {
       renderer.setSize(window.innerWidth, window.innerHeight);
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
     });
 
-    // Rendering Loop
     function animate() {
       requestAnimationFrame(animate);
-      controls.update(); // Update orbit controls
-      updateCameraPosition(); // Update camera position based on key presses
+      controls.update();
       renderer.render(scene, camera);
     }
 
