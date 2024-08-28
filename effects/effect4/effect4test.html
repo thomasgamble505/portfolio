@@ -109,12 +109,12 @@
     directionalLight.castShadow = true;
     directionalLight.shadow.mapSize.width = 2048; // High-resolution shadow map
     directionalLight.shadow.mapSize.height = 2048;
-    directionalLight.shadow.camera.near = 0.5;
-    directionalLight.shadow.camera.far = 500;
-    directionalLight.shadow.camera.left = -10;
-    directionalLight.shadow.camera.right = 10;
-    directionalLight.shadow.camera.top = 10;
-    directionalLight.shadow.camera.bottom = -10;
+    directionalLight.shadow.camera.near = 10;
+    directionalLight.shadow.camera.far = 500000;
+    directionalLight.shadow.camera.left = -1000;
+    directionalLight.shadow.camera.right = 1000;
+    directionalLight.shadow.camera.top = 1000;
+    directionalLight.shadow.camera.bottom = -1000;
     scene.add(directionalLight);
 
     // Plane Geometry with noise displacement
