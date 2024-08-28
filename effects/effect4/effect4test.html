@@ -155,6 +155,9 @@
     controls.enableDamping = true;
     controls.dampingFactor = 0.25;
     controls.enableZoom = true;
+    controls.enablePan = true;  // Allow panning to move camera freely
+    controls.screenSpacePanning = true; // Allow panning in screen space
+    controls.maxPolarAngle = Math.PI;  // No restriction on the vertical rotation angle
 
     const moveSpeed = 0.1;
     const keys = {};
@@ -168,17 +171,26 @@
     });
 
     function updateCameraPosition() {
+      const direction = new THREE.Vector3();
+      camera.getWorldDirection(direction);
+
       if (keys['KeyW']) {
-        camera.position.z -= moveSpeed;
+        camera.position.addScaledVector(direction, moveSpeed);
       }
       if (keys['KeyS']) {
-        camera.position.z += moveSpeed;
+        camera.position.addScaledVector(direction, -moveSpeed);
       }
       if (keys['KeyA']) {
         camera.position.x -= moveSpeed;
       }
       if (keys['KeyD']) {
         camera.position.x += moveSpeed;
+      }
+      if (keys['KeyQ']) {
+        camera.position.y -= moveSpeed;
+      }
+      if (keys['KeyE']) {
+        camera.position.y += moveSpeed;
       }
     }
 
