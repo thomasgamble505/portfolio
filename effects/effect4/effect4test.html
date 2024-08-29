@@ -55,21 +55,38 @@
 
   <canvas id="canvas"></canvas>
 
-  <!-- Three.js Library -->
+  <!-- Three.js and Path Tracing Renderer -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.143.0/build/three.min.js"></script>
-  <!-- Path Tracing Renderer -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.143.0/examples/jsm/renderers/PathTracingRenderer.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.143.0/examples/jsm/controls/OrbitControls.js"></script>
 
   <script>
-    // Define DOM elements
-    const subdivisionsSlider = document.getElementById('subdivisions');
-    const wireframeCheckbox = document.getElementById('wireframe');
-    const displacementStrengthSlider = document.getElementById('displacementStrength');
-    const displacementScaleSlider = document.getElementById('displacementScale');
-    const displacementDetailSlider = document.getElementById('displacementDetail');
-    const lightAzimuthSlider = document.getElementById('lightAzimuth');
-    const lightElevationSlider = document.getElementById('lightElevation');
+    // Initialize Scene and Camera
+    const canvas = document.getElementById('canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(5, 5, 5);
+
+    // Path Tracing Renderer Setup
+    const pathTracingRenderer = new THREE.PathTracingRenderer({
+      camera,
+      scene,
+      renderer,
+      pathTracingRenderTarget: new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
+        type: THREE.FloatType
+      }),
+    });
+
+    // Set background to black
+    scene.background = new THREE.Color(0x000000);
+
+    // Adding light to simulate sunlight
+    const light = new THREE.DirectionalLight(0xffffff, 1);
+    light.position.set(10, 10, 10);
+    scene.add(light);
 
     // Perlin noise functions
     function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
@@ -93,35 +110,7 @@
                     lerp(u, grad(perm[A + 1], x, y - 1), grad(perm[B + 1], x - 1, y - 1)));
     }
     const perm = [...Array(256).keys()].map(i => i).sort(() => Math.random() - 0.5);
-    perm.push(...perm); // Duplicate to avoid overflow
-
-    // Three.js setup
-    const canvas = document.getElementById('canvas');
-    const renderer = new THREE.WebGLRenderer({ canvas: canvas });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-
-    // Scene and camera
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(5, 5, 5);
-
-    // Path tracing renderer setup
-    const pathTracingRenderer = new THREE.PathTracingRenderer({
-      camera,
-      scene,
-      renderer,
-      pathTracingRenderTarget: new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
-        type: THREE.FloatType
-      }),
-    });
-
-    // Set background to black
-    scene.background = new THREE.Color(0x000000);
-
-    // Adding light to simulate sunlight
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(10, 10, 10);
-    scene.add(light);
+    perm.push(...perm);
 
     // Plane Geometry with noise displacement
     function createPlaneGeometry() {
@@ -191,7 +180,8 @@
       requestAnimationFrame(animate);
       controls.update();
       pathTracingRenderer.update();
-      pathTracingRenderer.render();
+      renderer.setRenderTarget(null);
+      renderer.render(scene, camera); // Render the scene with path tracing
     }
 
     animate();
