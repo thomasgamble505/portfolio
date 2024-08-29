@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Interactive 3D Plane with Path Tracing</title>
+  <title>Interactive 3D Plane with Basic Ray Tracing</title>
   <style>
     body {
       margin: 0;
@@ -55,30 +55,19 @@
 
   <canvas id="canvas"></canvas>
 
-  <!-- Three.js and Path Tracing Renderer -->
+  <!-- Three.js -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.143.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.143.0/examples/jsm/renderers/PathTracingRenderer.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.143.0/examples/jsm/controls/OrbitControls.js"></script>
 
   <script>
     // Initialize Scene and Camera
     const canvas = document.getElementById('canvas');
-    const renderer = new THREE.WebGLRenderer({ canvas });
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(5, 5, 5);
-
-    // Path Tracing Renderer Setup
-    const pathTracingRenderer = new THREE.PathTracingRenderer({
-      camera,
-      scene,
-      renderer,
-      pathTracingRenderTarget: new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
-        type: THREE.FloatType
-      }),
-    });
 
     // Set background to black
     scene.background = new THREE.Color(0x000000);
@@ -147,6 +136,7 @@
     plane.receiveShadow = true;
     scene.add(plane);
 
+    // OrbitControls setup
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.25;
@@ -179,9 +169,7 @@
     function animate() {
       requestAnimationFrame(animate);
       controls.update();
-      pathTracingRenderer.update();
-      renderer.setRenderTarget(null);
-      renderer.render(scene, camera); // Render the scene with path tracing
+      renderer.render(scene, camera); // Render the scene with standard renderer
     }
 
     animate();
