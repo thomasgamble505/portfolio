@@ -1,8 +1,6 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Interactive 3D Plane with Lighting and Perlin Noise</title>
   <style>
     body {
@@ -56,6 +54,7 @@
   <canvas id="canvas"></canvas>
 
   <script src="https://cdn.jsdelivr.net/npm/three@0.143.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.143.0/examples/js/controls/OrbitControls.js"></script>
   <script>
     // Define DOM elements
     const subdivisionsSlider = document.getElementById('subdivisions');
@@ -151,9 +150,13 @@
     plane.receiveShadow = true; // The plane will receive shadows
     scene.add(plane);
 
-    // Free camera movement
+    // Camera controls
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.25;
+    controls.enableZoom = true;
+
     const moveSpeed = 0.1;
-    const rotationSpeed = 0.02;
     const keys = {};
 
     document.addEventListener('keydown', (event) => {
@@ -165,79 +168,19 @@
     });
 
     function updateCameraPosition() {
-      const direction = new THREE.Vector3();
-      const right = new THREE.Vector3();
-      camera.getWorldDirection(direction);
-      camera.getWorldDirection(right).cross(camera.up);
-
-      // Camera movement
       if (keys['KeyW']) {
-        camera.position.addScaledVector(direction, moveSpeed);
+        camera.position.z -= moveSpeed;
       }
       if (keys['KeyS']) {
-        camera.position.addScaledVector(direction, -moveSpeed);
+        camera.position.z += moveSpeed;
       }
       if (keys['KeyA']) {
-        camera.position.addScaledVector(right, -moveSpeed);
+        camera.position.x -= moveSpeed;
       }
       if (keys['KeyD']) {
-        camera.position.addScaledVector(right, moveSpeed);
-      }
-      if (keys['KeyQ']) {
-        camera.position.y -= moveSpeed;
-      }
-      if (keys['KeyE']) {
-        camera.position.y += moveSpeed;
-      }
-
-      // Camera rotation
-      if (keys['ArrowLeft']) {
-        camera.rotation.y += rotationSpeed;
-      }
-      if (keys['ArrowRight']) {
-        camera.rotation.y -= rotationSpeed;
-      }
-      if (keys['ArrowUp']) {
-        camera.rotation.x += rotationSpeed;
-      }
-      if (keys['ArrowDown']) {
-        camera.rotation.x -= rotationSpeed;
+        camera.position.x += moveSpeed;
       }
     }
-
-    // Mouse drag for panning
-    let isDragging = false;
-    let previousMousePosition = { x: 0, y: 0 };
-
-    canvas.addEventListener('mousedown', (event) => {
-      isDragging = true;
-      previousMousePosition = {
-        x: event.clientX,
-        y: event.clientY
-      };
-    });
-
-    canvas.addEventListener('mousemove', (event) => {
-      if (isDragging) {
-        const deltaMove = {
-          x: event.clientX - previousMousePosition.x,
-          y: event.clientY - previousMousePosition.y
-        };
-
-        const panSpeed = 0.005; // Adjust the pan speed as needed
-        camera.position.x -= deltaMove.x * panSpeed;
-        camera.position.y += deltaMove.y * panSpeed;
-
-        previousMousePosition = {
-          x: event.clientX,
-          y: event.clientY
-        };
-      }
-    });
-
-    canvas.addEventListener('mouseup', () => {
-      isDragging = false;
-    });
 
     // Control events
     function updatePlane() {
@@ -280,6 +223,7 @@
     // Animation loop
     function animate() {
       requestAnimationFrame(animate);
+      controls.update();
       updateCameraPosition();
       renderer.render(scene, camera);
     }
