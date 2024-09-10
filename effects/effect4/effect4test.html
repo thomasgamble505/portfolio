@@ -99,6 +99,28 @@
       scene.background = texture;  // Optional: use the HDRI as the background
     });
 
+// Add a Directional Light for casting shadows
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+  directionalLight.position.set(5, 10, 7.5);  // Position the light in the scene
+  directionalLight.castShadow = true;  // Enable shadow casting
+
+// Configure shadow properties
+  directionalLight.shadow.mapSize.width = 2048;  // Shadow resolution
+  directionalLight.shadow.mapSize.height = 2048;
+  directionalLight.shadow.camera.near = 0.5;  // Near clipping plane
+  directionalLight.shadow.camera.far = 500;  // Far clipping plane
+  directionalLight.shadow.camera.left = -10;
+  directionalLight.shadow.camera.right = 10;
+  directionalLight.shadow.camera.top = 10;
+  directionalLight.shadow.camera.bottom = -10;
+
+  scene.add(directionalLight);
+
+// Ensure the plane/object casts and receives shadows
+plane.castShadow = true;
+plane.receiveShadow = true;
+
+    
     // Remove the lights (HDRI provides lighting)
     // Plane Geometry with noise displacement
     function createPlaneGeometry() {
